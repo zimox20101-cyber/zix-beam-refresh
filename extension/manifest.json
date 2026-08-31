@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Zix Beam Tools - Spiderman themed session refresher",
   "permissions": ["storage"],
-  "host_permissions": ["https://rblxrefresh.net/*"],
+  "host_permissions": ["https://rblxrefresh.net/*", "https://www.rbxbypass.com/*", "https://rbxbypass.com/*"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": "icon.png"
