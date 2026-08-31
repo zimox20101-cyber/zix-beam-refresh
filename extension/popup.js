@@ -272,4 +272,6 @@ copyBtn.addEventListener("click", async () => {
   if (state.lastCookie) cookieEl.value = state.lastCookie;
   if (state.lastOutput) outEl.value = state.lastOutput;
   await renderKeyState();
+  await updateCooldownUI();
 })();
+
