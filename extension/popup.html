@@ -61,7 +61,9 @@
         text-transform: uppercase;
         box-shadow: 0 3px 0 #000;
         transition: transform 0.05s;
+        opacity: 0.7;
       }
+      .tab-btn.active { opacity: 1; outline: 2px solid #fff; }
       .tab-btn:hover { filter: brightness(1.1); }
       .tab-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
       .panel {
@@ -70,6 +72,7 @@
         border-radius: 8px;
         padding: 12px;
       }
+      .panel[hidden] { display: none; }
       label {
         display: block;
         font-size: 13px;
@@ -145,7 +148,8 @@
       </header>
 
       <div class="tabs">
-        <button class="tab-btn" id="tab-session">Session</button>
+        <button class="tab-btn active" data-tab="session">Session</button>
+        <button class="tab-btn" data-tab="bypass">Bypass</button>
       </div>
 
       <section class="panel" id="panel-session">
@@ -159,6 +163,19 @@
           <button class="copy" id="copy-btn">COPY</button>
         </div>
         <textarea id="output" readonly placeholder="Refreshed cookie appears here..."></textarea>
+      </section>
+
+      <section class="panel" id="panel-bypass" hidden>
+        <label for="bypass-in">Paste link / text to bypass</label>
+        <textarea id="bypass-in" placeholder="https://linkvertise.com/..."></textarea>
+        <button class="go" id="bypass-btn">BYPASS IT</button>
+        <div class="status" id="bypass-status"></div>
+
+        <div class="out-row">
+          <label style="margin:0">Bypassed result</label>
+          <button class="copy" id="bypass-copy">COPY</button>
+        </div>
+        <textarea id="bypass-out" readonly placeholder="Bypassed link appears here..."></textarea>
       </section>
 
       <footer>WITH GREAT COOKIES COMES GREAT RESPONSIBILITY</footer>
