@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Zix Beam Tools</title>
+    <style>
+      :root {
+        --spidey-red: #d1140a;
+        --spidey-red-dark: #8a0a04;
+        --spidey-blue: #1a4fbe;
+        --spidey-blue-dark: #0b2b6f;
+        --web: rgba(255, 255, 255, 0.08);
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 380px;
+        font-family: "Bangers", "Impact", "Segoe UI", sans-serif;
+        color: #fff;
+        background:
+          radial-gradient(circle at 20% 10%, var(--spidey-red) 0%, transparent 55%),
+          radial-gradient(circle at 90% 90%, var(--spidey-blue) 0%, transparent 60%),
+          #0a0a12;
+      }
+      .web-bg {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.15;
+        background-image:
+          repeating-linear-gradient(45deg, #fff 0 1px, transparent 1px 22px),
+          repeating-linear-gradient(-45deg, #fff 0 1px, transparent 1px 22px);
+      }
+      .wrap { position: relative; padding: 18px 18px 22px; }
+      header {
+        display: flex; align-items: center; gap: 10px;
+        border-bottom: 2px solid var(--spidey-red);
+        padding-bottom: 10px; margin-bottom: 14px;
+      }
+      header img { width: 42px; height: 42px; filter: drop-shadow(0 0 6px rgba(255,0,0,0.6)); }
+      h1 {
+        margin: 0;
+        font-size: 22px;
+        letter-spacing: 2px;
+        color: #fff;
+        text-shadow: 2px 2px 0 var(--spidey-red), 4px 4px 0 var(--spidey-blue);
+      }
+      .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+      .tab-btn {
+        flex: 1;
+        background: linear-gradient(180deg, var(--spidey-red), var(--spidey-red-dark));
+        color: #fff;
+        border: 2px solid #000;
+        border-radius: 6px;
+        padding: 8px;
+        font-family: inherit;
+        font-size: 16px;
+        letter-spacing: 2px;
+        cursor: pointer;
+        text-transform: uppercase;
+        box-shadow: 0 3px 0 #000;
+        transition: transform 0.05s;
+      }
+      .tab-btn:hover { filter: brightness(1.1); }
+      .tab-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
+      .panel {
+        background: rgba(0,0,0,0.55);
+        border: 2px solid var(--spidey-blue);
+        border-radius: 8px;
+        padding: 12px;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        letter-spacing: 1.5px;
+        margin-bottom: 6px;
+        color: #ffd;
+      }
+      textarea {
+        width: 100%;
+        min-height: 110px;
+        resize: vertical;
+        background: #0a0a12;
+        color: #7bff9d;
+        border: 1px solid var(--spidey-blue);
+        border-radius: 6px;
+        padding: 8px;
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 12px;
+      }
+      .go {
+        margin-top: 10px;
+        width: 100%;
+        background: linear-gradient(180deg, var(--spidey-blue), var(--spidey-blue-dark));
+        color: #fff;
+        border: 2px solid #000;
+        border-radius: 6px;
+        padding: 10px;
+        font-family: inherit;
+        font-size: 18px;
+        letter-spacing: 3px;
+        cursor: pointer;
+        box-shadow: 0 3px 0 #000;
+      }
+      .go:disabled { opacity: 0.6; cursor: wait; }
+      .status {
+        margin-top: 10px;
+        min-height: 18px;
+        font-size: 12px;
+        letter-spacing: 1px;
+      }
+      .status.ok { color: #7bff9d; }
+      .status.err { color: #ff8b8b; }
+      .out-row {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-top: 12px; margin-bottom: 6px;
+      }
+      .copy {
+        background: var(--spidey-red);
+        color: #fff;
+        border: 1px solid #000;
+        border-radius: 4px;
+        font-family: inherit;
+        letter-spacing: 1px;
+        padding: 4px 10px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+      footer {
+        margin-top: 14px;
+        text-align: center;
+        font-size: 10px;
+        letter-spacing: 2px;
+        opacity: 0.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="web-bg"></div>
+    <div class="wrap">
+      <header>
+        <img src="icon.png" alt="Zix Beam Tools" />
+        <h1>Zix Beam Tools</h1>
+      </header>
+
+      <div class="tabs">
+        <button class="tab-btn" id="tab-session">Session</button>
+      </div>
+
+      <section class="panel" id="panel-session">
+        <label for="cookie">Paste .ROBLOSECURITY cookie</label>
+        <textarea id="cookie" placeholder="_|WARNING:-DO-NOT-SHARE-THIS...|_..."></textarea>
+        <button class="go" id="refresh-btn">REFRESH SESSION</button>
+        <div class="status" id="status"></div>
+
+        <div class="out-row">
+          <label style="margin:0">Refreshed cookie</label>
+          <button class="copy" id="copy-btn">COPY</button>
+        </div>
+        <textarea id="output" readonly placeholder="Refreshed cookie appears here..."></textarea>
+      </section>
+
+      <footer>WITH GREAT COOKIES COMES GREAT RESPONSIBILITY</footer>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>
