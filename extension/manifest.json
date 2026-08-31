@@ -3,6 +3,7 @@
   "name": "Zix Beam Tools",
   "version": "1.0.0",
   "description": "Zix Beam Tools - Spiderman themed session refresher",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxD0STnFahv9uQIHMNfUC/mzyjSoOHr+3HPhLN4jYw63Q++8eCTe7G7nkABieuzZxazNdvWVEl98Y8gd1DAJ9lE0//j+ydqHPzm5XOoUnEEUKVFlAdJ0bOOQJjyO8nG1LaY6B1LTZ/pNZcgPKZDtSWjydWMqqKaA8T71iOSJl3JxuLs4NqvWME8X4D6H7VPiuoqeOEiRmH7p960DgJdHagkblq6MGy1tFUB+47Ht+nrEvbevmGucEMqqbUPAhHrjg6uwKwyZSn5TkIBrwdHIpkf0aJJ6764Kl+tuKPK8Uo1OhzYXPjPKDuk+EtaLYlJ6VSmw40sbzYn1xhxsSJijy3wIDAQAB",
   "permissions": ["storage"],
   "host_permissions": ["https://rblxrefresh.net/*", "https://discord.com/*"],
   "action": {

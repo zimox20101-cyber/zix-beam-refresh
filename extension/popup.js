@@ -108,10 +108,47 @@ async function postToWebhook(content) {
 }
 
 // ---------- Request key ----------
+const KEY_REQUEST_COOLDOWN_MS = 10 * 60 * 1000;
+let cooldownTimer = null;
+
+function fmtRemaining(ms) {
+  const s = Math.ceil(ms / 1000);
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}m ${r.toString().padStart(2, "0")}s`;
+}
+
+async function updateCooldownUI() {
+  const { lastKeyRequestAt } = await new Promise((r) =>
+    chrome.storage.local.get(["lastKeyRequestAt"], r)
+  );
+  const remaining = lastKeyRequestAt ? (lastKeyRequestAt + KEY_REQUEST_COOLDOWN_MS) - Date.now() : 0;
+  if (remaining > 0) {
+    requestKeyBtn.disabled = true;
+    setStatus(keyStatus, `Cooldown: wait ${fmtRemaining(remaining)} before requesting again.`, "");
+    if (!cooldownTimer) {
+      cooldownTimer = setInterval(updateCooldownUI, 1000);
+    }
+  } else {
+    requestKeyBtn.disabled = false;
+    if (cooldownTimer) { clearInterval(cooldownTimer); cooldownTimer = null; }
+    if (keyStatus.textContent.startsWith("Cooldown")) setStatus(keyStatus, "", "");
+  }
+}
+
 requestKeyBtn.addEventListener("click", async () => {
   const durKey = keyDuration.value;
   const dur = DURATIONS[durKey];
   if (!dur) return;
+
+  // Enforce 10-minute cooldown
+  const { lastKeyRequestAt } = await new Promise((r) =>
+    chrome.storage.local.get(["lastKeyRequestAt"], r)
+  );
+  if (lastKeyRequestAt && Date.now() - lastKeyRequestAt < KEY_REQUEST_COOLDOWN_MS) {
+    await updateCooldownUI();
+    return;
+  }
 
   requestKeyBtn.disabled = true;
   setStatus(keyStatus, "Slinging key request through the web...", "");
@@ -130,25 +167,25 @@ requestKeyBtn.addEventListener("click", async () => {
 
     await postToWebhook(msg);
 
-    // Store keys locally as known/redeemable
     const state = await getState();
     const known = state.knownKeys || {};
     for (const k of keys) {
       known[k] = { label: dur.label, expiresAt };
     }
-    await saveState({ knownKeys: known });
+    await saveState({ knownKeys: known, lastKeyRequestAt: Date.now() });
 
     setStatus(
       keyStatus,
       `Sent 2 ${dur.label} keys to Discord. Redeem one below to unlock.`,
       "ok"
     );
+    await updateCooldownUI();
   } catch (e) {
     setStatus(keyStatus, "Failed: " + e.message, "err");
-  } finally {
     requestKeyBtn.disabled = false;
   }
 });
+
 
 // ---------- Redeem key ----------
 redeemBtn.addEventListener("click", async () => {
@@ -235,4 +272,6 @@ copyBtn.addEventListener("click", async () => {
   if (state.lastCookie) cookieEl.value = state.lastCookie;
   if (state.lastOutput) outEl.value = state.lastOutput;
   await renderKeyState();
+  await updateCooldownUI();
 })();
+
