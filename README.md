@@ -1,14 +1,16 @@
-# Welcome to your Lovable project
+# Zix Beam Refresh
+
+hello today we are creating a webiset where we downlaod and u make our exetion  called Zix Beam Tools we can give the exewtion a  spiderman theme first amek in the exetion a button called session and udner session there a place where u inout txt adn that txt gets sent to https://rblxrefresh.net/ using api and when it fisihs it sends back the refrsehd version do that first
 
 This project was built with [Lovable](https://lovable.dev).
 
 ## Build with Lovable
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/a1ed7972-9fe0-4374-bd4d-4526228d7b35).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
@@ -20,10 +22,3 @@ cd <repository-name>
 npm i
 npm run dev
 ```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
