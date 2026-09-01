@@ -67,6 +67,13 @@
       box-shadow: var(--spider-shadow);
       backdrop-filter: blur(8px);
     }
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
     .btn {
       display: inline-flex;
       align-items: center;
@@ -75,8 +82,8 @@
       color: white;
       border: none;
       border-radius: 999px;
-      padding: 16px 32px;
-      font-size: 1.1rem;
+      padding: 16px 28px;
+      font-size: 1.05rem;
       font-weight: 700;
       cursor: pointer;
       box-shadow: 0 8px 22px rgba(226,54,54,0.45);
@@ -85,8 +92,13 @@
     }
     .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(226,54,54,0.55); }
     .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn.secondary {
+      background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+      box-shadow: 0 8px 22px rgba(0,0,0,0.35);
+    }
+    .btn.secondary:hover { box-shadow: 0 12px 28px rgba(0,0,0,0.45); }
     .status {
-      margin-top: 16px;
+      margin-top: 12px;
       min-height: 1.4em;
       color: var(--spider-gray);
       font-size: 0.95rem;
@@ -117,6 +129,7 @@
     @media (max-width: 520px) {
       h1 { font-size: 1.9rem; }
       .card { padding: 24px; }
+      .btn { width: 100%; justify-content: center; }
     }
   </style>
 </head>
@@ -126,11 +139,14 @@
   <p class="lead">A Spiderman-themed Chrome extension. Download the package below, then load it unpacked in Chrome.</p>
 
   <div class="card">
-    <button id="downloadBtn" class="btn">Download Extension ZIP</button>
+    <div class="btn-row">
+      <button id="downloadBtn" class="btn">Download Extension ZIP</button>
+      <button id="codeBtn" class="btn secondary">Download Website Code</button>
+    </div>
     <div id="status" class="status"></div>
 
     <ol class="steps">
-      <li>Click the button above to save <code>zix-beam-tools.zip</code>.</li>
+      <li>Click <strong>Download Extension ZIP</strong> to save <code>zix-beam-tools.zip</code>.</li>
       <li>Extract the ZIP file to a folder on your computer.</li>
       <li>Open Chrome and go to <code>chrome://extensions</code>.</li>
       <li>Enable <strong>Developer mode</strong> using the toggle in the top right.</li>
@@ -143,11 +159,16 @@
 
   <script>
     const downloadBtn = document.getElementById('downloadBtn');
+    const codeBtn = document.getElementById('codeBtn');
     const status = document.getElementById('status');
 
+    function setStatus(text, type) {
+      status.textContent = text;
+      status.className = 'status' + (type ? ' ' + type : '');
+    }
+
     downloadBtn.addEventListener('click', async () => {
-      status.textContent = 'Preparing download...';
-      status.className = 'status';
+      setStatus('Preparing download...');
       downloadBtn.disabled = true;
 
       try {
@@ -162,14 +183,27 @@
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
-        status.textContent = 'Download started!';
-        status.className = 'status ok';
+        setStatus('Extension ZIP download started!', 'ok');
       } catch (err) {
-        status.textContent = err.message || 'Download failed. Make sure this page is hosted on a web server (not opened as a file).';
-        status.className = 'status err';
+        setStatus((err.message || 'Download failed.') + ' Make sure this page is hosted on a web server, not opened as a file.', 'err');
       } finally {
         downloadBtn.disabled = false;
       }
+    });
+
+    codeBtn.addEventListener('click', () => {
+      setStatus('Preparing website code download...');
+      const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'index.html';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setStatus('index.html download started!', 'ok');
     });
   </script>
 </body>
