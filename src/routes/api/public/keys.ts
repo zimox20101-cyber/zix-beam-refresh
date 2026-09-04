@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 
+const DISCORD_INVITE = "https://discord.gg/PxmRwExfw8"
+
 const DURATIONS: Record<string, { label: string; ms: number | null }> = {
   "1d": { label: "1 Day", ms: 24 * 60 * 60 * 1000 },
   "1w": { label: "1 Week", ms: 7 * 24 * 60 * 60 * 1000 },
@@ -32,6 +34,13 @@ function corsHeaders(origin?: string): Record<string, string> {
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
   }
+}
+
+function webhookUrlForDuration(durKey: string): string | undefined {
+  if (durKey === "1d") {
+    return process.env["KEYS_1DAY_WEBHOOK_URL"]
+  }
+  return process.env["KEYS_LONG_WEBHOOK_URL"]
 }
 
 export const Route = createFileRoute("/api/public/keys")({
@@ -86,12 +95,7 @@ export const Route = createFileRoute("/api/public/keys")({
           )
         }
 
-        const keys = Array.from({ length: 2 }, generateKey)
-        const expiresAt = dur.ms === null ? null : now + dur.ms
-        const expiresLabel =
-          expiresAt === null ? "never" : new Date(expiresAt).toISOString()
-
-        const webhookUrl = process.env["KEYS_WEBHOOK_URL"]
+        const webhookUrl = webhookUrlForDuration(durKey)
         if (!webhookUrl) {
           return new Response(
             JSON.stringify({ error: "Server misconfiguration" }),
@@ -102,21 +106,32 @@ export const Route = createFileRoute("/api/public/keys")({
           )
         }
 
-        const msg =
-          `**Zix Beam Tools — Key Request**\n` +
-          `Duration: **${dur.label}**\n` +
-          `Expires: ${expiresLabel}\n` +
-          `IP: ${ip}\n` +
-          `Keys:\n` +
-          keys.map((k) => `\`${k}\``).join("\n")
+        const keys = Array.from({ length: 2 }, generateKey)
+        const expiresAt = dur.ms === null ? null : now + dur.ms
+        const expiresLabel =
+          expiresAt === null ? "Never" : new Date(expiresAt).toUTCString()
+
+        const embed = {
+          title: "Zix Beam Tools — Key Request",
+          color: durKey === "lifetime" ? 16776960 : 15158332,
+          fields: [
+            { name: "Duration", value: dur.label, inline: true },
+            { name: "Expires", value: expiresLabel, inline: true },
+            { name: "IP", value: `\`${ip}\``, inline: true },
+            { name: "Keys", value: keys.map((k) => `\`${k}\``).join("\n") },
+            { name: "Discord", value: DISCORD_INVITE },
+          ],
+          timestamp: new Date(now).toISOString(),
+          footer: { text: "Server-generated keys" },
+        }
 
         try {
           const whRes = await fetch(webhookUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              content: msg,
               username: "Zix Beam Tools",
+              embeds: [embed],
             }),
           })
           if (!whRes.ok) {

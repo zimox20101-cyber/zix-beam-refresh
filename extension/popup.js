@@ -1,6 +1,7 @@
 const $ = (id) => document.getElementById(id);
 
-// Backend that generates keys and sends them to the hidden Discord webhook.
+// The extension only talks to your own app backend.
+// Keys and Discord webhook URLs are generated/stored server-side.
 const API_BASE = "https://zixbeam-web-session.lovable.app";
 
 const DURATIONS = {
@@ -41,6 +42,11 @@ document.querySelectorAll(".tab-btn").forEach((b) => {
 function setStatus(el, msg, kind) {
   el.textContent = msg;
   el.className = "status " + (kind || "");
+}
+
+function setPulse(el, msg) {
+  el.textContent = msg;
+  el.className = "status pulse";
 }
 
 // ---------- Keys ----------
@@ -152,7 +158,7 @@ requestKeyBtn.addEventListener("click", async () => {
   }
 
   requestKeyBtn.disabled = true;
-  setStatus(keyStatus, "Slinging key request through the web...", "");
+  setPulse(keyStatus, "Slinging key request through the web...");
 
   try {
     const data = await requestKeysFromBackend(durKey);
