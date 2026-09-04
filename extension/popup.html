@@ -70,6 +70,11 @@
       .status { margin-top: 10px; min-height: 18px; font-size: 12px; letter-spacing: 1px; }
       .status.ok { color: #7bff9d; }
       .status.err { color: #ff8b8b; }
+      .status.pulse { animation: pulse 1.2s ease-in-out infinite; }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.02); }
+      }
       .out-row {
         display: flex; align-items: center; justify-content: space-between;
         margin-top: 12px; margin-bottom: 6px;
@@ -82,6 +87,17 @@
       .row { display: flex; gap: 6px; }
       .row > * { flex: 1; }
       .locked-msg { text-align: center; padding: 20px 10px; font-size: 14px; letter-spacing: 1.5px; color: #ffd; }
+      .discord {
+        margin-top: 12px; text-align: center;
+      }
+      .discord a {
+        display: inline-block;
+        color: #fff; background: #5865F2; text-decoration: none;
+        padding: 8px 14px; border-radius: 6px; border: 2px solid #000;
+        font-size: 13px; letter-spacing: 1px; box-shadow: 0 3px 0 #000;
+      }
+      .discord a:hover { filter: brightness(1.1); }
+      .discord a:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
       footer { margin-top: 14px; text-align: center; font-size: 10px; letter-spacing: 2px; opacity: 0.6; }
     </style>
   </head>
@@ -137,6 +153,10 @@
           <button class="copy" id="redeem-btn">REDEEM</button>
         </div>
         <div class="status" id="redeem-status"></div>
+
+        <div class="discord">
+          <a id="discord-link" href="https://discord.gg/PxmRwExfw8" target="_blank" rel="noopener">Join Discord for support</a>
+        </div>
       </section>
 
       <footer>WITH GREAT COOKIES COMES GREAT RESPONSIBILITY</footer>
